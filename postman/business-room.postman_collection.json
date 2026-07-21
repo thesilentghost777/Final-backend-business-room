@@ -1,0 +1,424 @@
+{
+  "info": {
+    "name": "Business Room API",
+    "description": "Collection complète pour tester l'API Business Room. Enchaîner les scénarios dans l'ordre : Auth -> Membership -> Referral -> Savings -> Marketplace -> Partnership -> Loans -> Assistance -> Admin.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": ["pm.test('Status 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "savingsId", "value": "" },
+    { "key": "marketPostId", "value": "" },
+    { "key": "cashbookId", "value": "" },
+    { "key": "loanId", "value": "" },
+    { "key": "packId", "value": "" },
+    { "key": "shareTxId", "value": "" },
+    { "key": "membershipId", "value": "" }
+    ,{ "key": "walletTopupToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register new member (referred by Alice)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('accessToken', j.data.accessToken);",
+            "pm.collectionVariables.set('refreshToken', j.data.refreshToken);",
+            "pm.collectionVariables.set('userId', j.data.user.id);"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"new.member+{{$timestamp}}@br.test\",\n  \"password\": \"NewMember@123\",\n  \"fullName\": \"Nouveau Membre\",\n  \"address\": \"Dakar\",\n  \"profession\": \"Commerçant\"\n}" }
+          }
+        },
+        {
+          "name": "Login (Alice - active member)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('accessToken', j.data.accessToken);"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@businessroom.test\",\n  \"password\": \"Alice@123456\"\n}" }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.collectionVariables.set('adminToken', pm.response.json().data.accessToken);"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@businessroom.test\",\n  \"password\": \"Admin@123456\"\n}" }
+          }
+        },
+        { "name": "Me", "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" } },
+        {
+          "name": "Firebase login (Google/Apple/Phone)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const j = pm.response.json();",
+            "  pm.collectionVariables.set('accessToken', j.data.accessToken);",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/firebase",
+            "description": "Envoyer l'ID token Firebase récupéré côté client (Google Sign-In / Apple Sign-In / Phone). Le backend crée/lie l'utilisateur et renvoie un JWT.",
+            "body": { "mode": "raw", "raw": "{\n  \"idToken\": \"PASTE_FIREBASE_ID_TOKEN_HERE\",\n  \"referralCode\": \"OPTIONAL_REFERRAL_CODE\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": { "mode": "raw", "raw": "{ \"refreshToken\": \"{{refreshToken}}\" }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Membership",
+      "item": [
+        {
+          "name": "Request membership (new user)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.collectionVariables.set('membershipId', pm.response.json().data.id);"
+          ]}}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/membership/request" }
+        },
+        { "name": "My membership status", "request": { "method": "GET", "url": "{{baseUrl}}/membership/me" } },
+        {
+          "name": "[ADMIN] Validate membership",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/membership/{{membershipId}}/validate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Referral",
+      "item": [
+        { "name": "Summary", "request": { "method": "GET", "url": "{{baseUrl}}/referral/summary" } },
+        { "name": "List referrals", "request": { "method": "GET", "url": "{{baseUrl}}/referral/list" } }
+      ]
+    },
+    {
+      "name": "4. Savings",
+      "item": [
+        {
+          "name": "Simulate DAILY (goal 1M, 1200/j)",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/savings/simulate",
+            "body": { "mode": "raw", "raw": "{ \"type\": \"DAILY\", \"goalXof\": 1000000, \"installmentXof\": 1200 }" }
+          }
+        },
+        {
+          "name": "Create DAILY savings",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.collectionVariables.set('savingsId', pm.response.json().data.id);"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/savings",
+            "body": { "mode": "raw", "raw": "{ \"type\": \"DAILY\", \"goalXof\": 1000000, \"installmentXof\": 1200 }" }
+          }
+        },
+        {
+          "name": "Contribute 1200",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/savings/{{savingsId}}/contribute",
+            "body": { "mode": "raw", "raw": "{ \"amountXof\": 1200 }" }
+          }
+        },
+        { "name": "List my savings", "request": { "method": "GET", "url": "{{baseUrl}}/savings" } },
+        {
+          "name": "Create BLOCKED savings (25% bonus)",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/savings",
+            "body": { "mode": "raw", "raw": "{ \"type\": \"BLOCKED\", \"goalXof\": 200000, \"installmentXof\": 200000 }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Marketplace",
+      "item": [
+        {
+          "name": "Publish product",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.collectionVariables.set('marketPostId', pm.response.json().data.id);"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/marketplace",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Sacs artisanaux\",\n  \"description\": \"Sacs cousus main\",\n  \"category\": \"produit\",\n  \"priceXof\": 15000,\n  \"whatsappNumber\": \"+221770000000\"\n}" }
+          }
+        },
+        { "name": "Browse queue", "request": { "method": "GET", "url": "{{baseUrl}}/marketplace" } },
+        { "name": "Featured today", "request": { "method": "GET", "url": "{{baseUrl}}/marketplace/featured" } },
+        { "name": "[ADMIN] Trigger rotation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/marketplace/rotate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Investors / Entrepreneurs",
+      "item": [
+        {
+          "name": "Declare investor profile",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/investors",
+            "body": { "mode": "raw", "raw": "{\n  \"capacityXof\": 5000000,\n  \"sectors\": [\"agriculture\",\"tech\"],\n  \"horizonMonths\": 24,\n  \"expectations\": \"12% de rentabilité annuelle\"\n}" }
+          }
+        },
+        { "name": "Browse entrepreneurs opportunities", "request": { "method": "GET", "url": "{{baseUrl}}/investors/opportunities" } },
+        {
+          "name": "Declare entrepreneur project",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/entrepreneurs",
+            "body": { "mode": "raw", "raw": "{\n  \"projectTitle\": \"Ferme avicole\",\n  \"description\": \"Extension d'une ferme existante\",\n  \"sector\": \"agriculture\",\n  \"amountRequestedXof\": 3000000,\n  \"personalContributionXof\": 500000,\n  \"need\": \"Matériel et trésorerie\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Partnership CFPAM",
+      "item": [
+        {
+          "name": "List packs",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const j = pm.response.json().data; if (j.length) pm.collectionVariables.set('packId', j[0].id);"
+          ]}}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/partnership/packs" }
+        },
+        { "name": "Current share value", "request": { "method": "GET", "url": "{{baseUrl}}/partnership/share-value" } },
+        {
+          "name": "Buy pack",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.collectionVariables.set('shareTxId', pm.response.json().data.id);"
+          ]}}],
+          "request": { "method": "POST", "url": "{{baseUrl}}/partnership/buy/{{packId}}" }
+        },
+        {
+          "name": "[ADMIN] Approve share tx",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/partnership/tx/{{shareTxId}}/approve"
+          }
+        },
+        { "name": "My portfolio", "request": { "method": "GET", "url": "{{baseUrl}}/partnership/portfolio" } }
+      ]
+    },
+    {
+      "name": "8. Cashbook",
+      "item": [
+        {
+          "name": "Create cashbook",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.collectionVariables.set('cashbookId', pm.response.json().data.id);"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/cashbook",
+            "body": { "mode": "raw", "raw": "{ \"name\": \"Boutique principale\", \"openingBalanceXof\": 50000 }" }
+          }
+        },
+        {
+          "name": "Add income",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/cashbook/{{cashbookId}}/operations",
+            "body": { "mode": "raw", "raw": "{ \"type\": \"INCOME\", \"label\": \"Vente\", \"amountXof\": 12000 }" }
+          }
+        },
+        {
+          "name": "Add expense",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/cashbook/{{cashbookId}}/operations",
+            "body": { "mode": "raw", "raw": "{ \"type\": \"EXPENSE\", \"label\": \"Achat stock\", \"amountXof\": 4500 }" }
+          }
+        },
+        { "name": "Today stats", "request": { "method": "GET", "url": "{{baseUrl}}/cashbook/{{cashbookId}}/today" } },
+        { "name": "Month journal", "request": { "method": "GET", "url": "{{baseUrl}}/cashbook/{{cashbookId}}/journal" } }
+      ]
+    },
+    {
+      "name": "9. Loans",
+      "item": [
+        { "name": "Simulate", "request": { "method": "GET", "url": "{{baseUrl}}/loans/simulate?amount=100000&months=6" } },
+        { "name": "Ceiling", "request": { "method": "GET", "url": "{{baseUrl}}/loans/ceiling" } },
+        {
+          "name": "Apply (Existing activity)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.collectionVariables.set('loanId', pm.response.json().data.id);"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/loans/apply",
+            "body": { "mode": "raw", "raw": "{ \"category\": \"EXISTING_ACTIVITY\", \"amountXof\": 50000, \"durationMonths\": 6 }" }
+          }
+        },
+        {
+          "name": "[ADMIN] Approve loan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/loans/{{loanId}}/approve"
+          }
+        },
+        {
+          "name": "[ADMIN] Disburse loan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/loans/{{loanId}}/disburse"
+          }
+        },
+        {
+          "name": "Repay partially",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/loans/{{loanId}}/repay",
+            "body": { "mode": "raw", "raw": "{ \"amountXof\": 10000 }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Assistance & Notifications",
+      "item": [
+        { "name": "List assistance categories", "request": { "method": "GET", "url": "{{baseUrl}}/assistance/categories" } },
+        {
+          "name": "Send assistance message",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/assistance/messages",
+            "body": { "mode": "raw", "raw": "{ \"categoryId\": \"REPLACE_CATEGORY_ID\", \"subject\": \"Aide\", \"content\": \"Bonjour...\" }" }
+          }
+        },
+        { "name": "My notifications", "request": { "method": "GET", "url": "{{baseUrl}}/notifications" } },
+        { "name": "Unread count", "request": { "method": "GET", "url": "{{baseUrl}}/notifications/unread-count" } }
+      ]
+    },
+    {
+      "name": "11. Admin",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+      "item": [
+        { "name": "Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/admin/dashboard" } },
+        { "name": "Search users", "request": { "method": "GET", "url": "{{baseUrl}}/admin/users?q=alice" } },
+        { "name": "Investor queue", "request": { "method": "GET", "url": "{{baseUrl}}/admin/queue/investors" } },
+        { "name": "Entrepreneur queue", "request": { "method": "GET", "url": "{{baseUrl}}/admin/queue/entrepreneurs" } },
+        { "name": "Pending withdrawals", "request": { "method": "GET", "url": "{{baseUrl}}/admin/withdrawals" } }
+      ]
+    },
+    {
+      "name": "12. Wallet",
+      "description": "Recharge via MoneyFusion, solde, paiements internes (adhésion, épargne, prêt, packs CFPAM).",
+      "item": [
+        { "name": "My balance", "request": { "method": "GET", "url": "{{baseUrl}}/wallet" } },
+        { "name": "My transactions", "request": { "method": "GET", "url": "{{baseUrl}}/wallet/transactions?limit=50" } },
+        {
+          "name": "Top-up (MoneyFusion)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201 || pm.response.code === 200) {",
+            "  const j = pm.response.json();",
+            "  if (j.data && j.data.token) pm.collectionVariables.set('walletTopupToken', j.data.token);",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/wallet/topup",
+            "description": "Initie une recharge : le backend appelle MoneyFusion et renvoie l'URL de paiement à ouvrir côté client.",
+            "body": { "mode": "raw", "raw": "{\n  \"amountXof\": 5000,\n  \"phone\": \"+2250101010101\",\n  \"fullName\": \"Alice Diallo\"\n}" }
+          }
+        },
+        {
+          "name": "Check top-up status",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wallet/topup/{{walletTopupToken}}/status" }
+        },
+        {
+          "name": "[WEBHOOK] MoneyFusion callback (simulate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-webhook-secret", "value": "{{MONEY_FUSION_WEBHOOK_SECRET}}" }
+            ],
+            "url": "{{baseUrl}}/wallet/webhook/moneyfusion",
+            "description": "Simule le POST envoyé par MoneyFusion sur webhook_url. À utiliser en local pour valider le crédit automatique.",
+            "body": { "mode": "raw", "raw": "{\n  \"tokenPay\": \"{{walletTopupToken}}\",\n  \"statut\": \"paid\",\n  \"Montant\": 5000,\n  \"moyen\": \"orange\",\n  \"numeroTransaction\": \"TXN-DEMO\",\n  \"personal_Info\": [{\"userId\": \"{{userId}}\"}]\n}" }
+          }
+        },
+        {
+          "name": "Pay membership from wallet",
+          "request": { "method": "POST", "url": "{{baseUrl}}/wallet/pay/membership" }
+        },
+        {
+          "name": "Pay savings contribution from wallet",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/wallet/pay/savings/{{savingsId}}",
+            "body": { "mode": "raw", "raw": "{ \"amountXof\": 1200 }" }
+          }
+        },
+        {
+          "name": "Pay loan repayment from wallet",
+          "request": {
+            "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/wallet/pay/loans/{{loanId}}/repayment",
+            "body": { "mode": "raw", "raw": "{ \"amountXof\": 10000 }" }
+          }
+        },
+        {
+          "name": "Buy share pack from wallet",
+          "request": { "method": "POST", "url": "{{baseUrl}}/wallet/pay/share-packs/{{packId}}" }
+        },
+        {
+          "name": "[ADMIN] Adjust user wallet",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/wallet/admin/{{userId}}/adjust",
+            "body": { "mode": "raw", "raw": "{ \"amountXof\": 25000, \"reason\": \"Bonus manuel\" }" }
+          }
+        }
+      ]
+    }
+  ]
+}

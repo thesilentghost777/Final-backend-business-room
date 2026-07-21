@@ -1,0 +1,498 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MEMBER
+  INVESTOR
+  ENTREPRENEUR
+  PARTNER
+  ADMIN
+  SUPER_ADMIN_CFPAM
+}
+
+enum AuthProvider {
+  EMAIL
+  PHONE
+  GOOGLE
+  APPLE
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum SavingsType {
+  DAILY
+  WEEKLY
+  BLOCKED
+}
+
+enum SavingsStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  CANCELLED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum ProfileStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum MarketPostStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum LoanCategory {
+  JSE
+  EXISTING_ACTIVITY
+}
+
+enum LoanStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  DISBURSED
+  REPAID
+  DEFAULTED
+}
+
+enum CashOpType {
+  INCOME
+  EXPENSE
+}
+
+enum ShareTxType {
+  BUY
+  SELL
+  DIVIDEND
+}
+
+enum ShareTxStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SETTLED
+}
+
+enum AssistanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum WalletTxType {
+  TOPUP
+  DEBIT
+  REFUND
+  ADJUSTMENT
+}
+
+enum WalletTxStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum WalletTxCategory {
+  TOPUP
+  MEMBERSHIP
+  SAVINGS
+  LOAN_REPAYMENT
+  SHARE_BUY
+  MARKETPLACE
+  WITHDRAWAL
+  ADJUSTMENT
+  OTHER
+}
+
+enum PaymentProvider {
+  MONEY_FUSION
+  MANUAL
+}
+
+model User {
+  id                String   @id @default(cuid())
+  firebaseUid       String?  @unique
+  email             String?  @unique
+  phone             String?  @unique
+  passwordHash      String?
+  fullName          String?
+  address           String?
+  profession        String?
+  photoUrl          String?
+  matricule         String?  @unique
+  referralCode      String?  @unique
+  referredById      String?
+  referredBy        User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals         User[]   @relation("Referrals")
+  roles             Role[]   @default([MEMBER])
+  authProviders     AuthProvider[] @default([])
+  profileCompleted  Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  membership        Membership?
+  investorProfile   InvestorProfile?
+  entrepreneurProfile EntrepreneurProfile?
+  savings           Savings[]
+  cashbooks         Cashbook[]
+  marketPosts       MarketPost[]
+  loans             Loan[]
+  shareHoldings     ShareHolding[]
+  shareTransactions ShareTransaction[]
+  assistanceMsgs   AssistanceMessage[]
+  notifications     Notification[]
+  loanTeamMembers   LoanTeamMember[]
+  wallet            Wallet?
+
+  @@index([referredById])
+}
+
+model Wallet {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balanceXof   BigInt   @default(0)
+  currency     String   @default("XOF")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id              String   @id @default(cuid())
+  walletId        String
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type            WalletTxType
+  category        WalletTxCategory @default(OTHER)
+  amountXof       BigInt
+  balanceAfterXof BigInt
+  status          WalletTxStatus @default(SUCCESS)
+  provider        PaymentProvider?
+  reference       String?  @unique
+  description     String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([walletId, createdAt])
+}
+
+model Membership {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       MembershipStatus @default(PENDING)
+  amountXof    Int
+  paidAt       DateTime?
+  validatedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model InvestorProfile {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  capacityXof       BigInt
+  sectors           String[]
+  horizonMonths     Int
+  expectations      String
+  status            ProfileStatus @default(SUBMITTED)
+  visible           Boolean @default(false)
+  queuePosition     Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  matchRequests MatchRequest[]
+}
+
+model EntrepreneurProfile {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectTitle      String
+  description       String
+  sector            String
+  amountRequestedXof BigInt
+  personalContributionXof BigInt @default(0)
+  need              String
+  status            ProfileStatus @default(SUBMITTED)
+  visible           Boolean @default(false)
+  queuePosition     Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  matchRequests MatchRequest[]
+}
+
+model Savings {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            SavingsType
+  goalXof         BigInt
+  totalToContributeXof BigInt
+  installmentXof  BigInt
+  numberOfInstallments Int
+  status          SavingsStatus @default(ACTIVE)
+  bonusXof        BigInt @default(0)
+  maturesAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contributions   SavingsContribution[]
+  withdrawal      SavingsWithdrawal?
+
+  @@index([userId])
+}
+
+enum MatchRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  MEETING_SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model MatchRequest {
+  id                    String   @id @default(cuid())
+  investorProfileId     String
+  investorProfile       InvestorProfile     @relation(fields: [investorProfileId], references: [id], onDelete: Cascade)
+  entrepreneurProfileId String
+  entrepreneurProfile   EntrepreneurProfile @relation(fields: [entrepreneurProfileId], references: [id], onDelete: Cascade)
+  initiatedById         String
+  status                MatchRequestStatus @default(PENDING)
+  message               String?
+  meetingScheduledAt    DateTime?
+  meetingLocation       String?
+  meetingNotes          String?
+  handledById           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([investorProfileId, entrepreneurProfileId])
+  @@index([investorProfileId])
+  @@index([entrepreneurProfileId])
+}
+
+model SavingsContribution {
+  id          String   @id @default(cuid())
+  savingsId   String
+  savings     Savings  @relation(fields: [savingsId], references: [id], onDelete: Cascade)
+  amountXof   BigInt
+  paidAt      DateTime @default(now())
+
+  @@index([savingsId])
+}
+
+model SavingsWithdrawal {
+  id           String   @id @default(cuid())
+  savingsId    String   @unique
+  savings      Savings  @relation(fields: [savingsId], references: [id], onDelete: Cascade)
+  amountXof    BigInt
+  status       WithdrawalStatus @default(PENDING)
+  requestedAt  DateTime @default(now())
+  processedAt  DateTime?
+  processedById String?
+}
+
+model MarketPost {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  description  String
+  category     String
+  priceXof     BigInt?
+  whatsappNumber String
+  imageUrl     String?
+  status       MarketPostStatus @default(ACTIVE)
+  queuePosition Int
+  lastFeaturedAt DateTime?
+  featuredToday Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, queuePosition])
+  @@index([featuredToday])
+}
+
+model SharePack {
+  id             String @id @default(cuid())
+  name           String
+  unitPriceXof   BigInt
+  sharesIncluded Int
+  active         Boolean @default(true)
+  createdAt      DateTime @default(now())
+  transactions   ShareTransaction[]
+}
+
+model ShareValueHistory {
+  id           String   @id @default(cuid())
+  valueXof     BigInt
+  effectiveAt  DateTime @default(now())
+  setById      String?
+  note         String?
+}
+
+model ShareHolding {
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares      Int     @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId])
+}
+
+model ShareTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packId      String?
+  pack        SharePack? @relation(fields: [packId], references: [id])
+  type        ShareTxType
+  shares      Int
+  unitPriceXof BigInt
+  totalXof    BigInt
+  status      ShareTxStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+  processedById String?
+}
+
+model Cashbook {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  openingBalanceXof BigInt @default(0)
+  createdAt  DateTime @default(now())
+  operations CashOperation[]
+
+  @@index([userId])
+}
+
+model CashOperation {
+  id          String   @id @default(cuid())
+  cashbookId  String
+  cashbook    Cashbook @relation(fields: [cashbookId], references: [id], onDelete: Cascade)
+  type        CashOpType
+  label       String
+  amountXof   BigInt
+  balanceAfterXof BigInt
+  occurredAt  DateTime @default(now())
+
+  @@index([cashbookId, occurredAt])
+}
+
+model Loan {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       LoanCategory
+  amountXof      BigInt
+  durationMonths Int
+  interestXof    BigInt
+  insuranceXof   BigInt
+  totalDueXof    BigInt
+  monthlyPaymentXof BigInt
+  projectDescription String?
+  status         LoanStatus @default(SUBMITTED)
+  approvedAt     DateTime?
+  approvedById   String?
+  disbursedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  team           LoanTeamMember[]
+  repayments     LoanRepayment[]
+
+  @@index([userId])
+}
+
+model LoanTeamMember {
+  id      String @id @default(cuid())
+  loanId  String
+  loan    Loan   @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([loanId, userId])
+}
+
+model LoanRepayment {
+  id       String @id @default(cuid())
+  loanId   String
+  loan     Loan   @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amountXof BigInt
+  paidAt   DateTime @default(now())
+}
+
+model AssistanceCategory {
+  id       String @id @default(cuid())
+  name     String @unique
+  active   Boolean @default(true)
+  messages AssistanceMessage[]
+}
+
+model AssistanceMessage {
+  id         String @id @default(cuid())
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   AssistanceCategory @relation(fields: [categoryId], references: [id])
+  subject    String
+  content    String
+  status     AssistanceStatus @default(OPEN)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id        String @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
