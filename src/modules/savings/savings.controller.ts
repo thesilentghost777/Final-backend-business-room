@@ -17,7 +17,6 @@ class ContributeDto {
 
 @ApiTags('savings')
 @ApiBearerAuth()
-@UseGuards(MembershipActiveGuard)
 @Controller('savings')
 export class SavingsController {
   constructor(private svc: SavingsService) {}
@@ -48,7 +47,7 @@ export class SavingsController {
     return this.svc.detail(u.id, id);
   }
 
-  @Post(':id/contribute')
+  @Post(':id/contri bute')
   contribute(@CurrentUser() u: any, @Param('id') id: string, @Body() dto: ContributeDto) {
     return this.svc.contribute(u.id, id, dto.amountXof);
   }
