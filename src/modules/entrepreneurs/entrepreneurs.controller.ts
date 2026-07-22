@@ -14,7 +14,7 @@ class EntrepreneurDto {
   @IsString() need!: string;
 }
 
-@ApiTags('entrepreneurs') @ApiBearerAuth() @UseGuards(MembershipActiveGuard) @Controller('entrepreneurs')
+@ApiTags('entrepreneurs') @ApiBearerAuth()  @Controller('entrepreneurs')
 export class EntrepreneursController {
   constructor(private svc: EntrepreneursService) {}
   @Post() upsert(@CurrentUser() u: any, @Body() dto: EntrepreneurDto) { return this.svc.upsert(u.id, dto); }

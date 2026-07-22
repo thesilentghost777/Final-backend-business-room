@@ -20,8 +20,8 @@ class RepayDto { @IsInt() @Min(1) amountXof!: number; }
 export class LoansController {
   constructor(private svc: LoansService) {}
   @Get('simulate') simulate(@Query('amount') a: string, @Query('months') m: string) { return this.svc.simulate(Number(a), Number(m)); }
-  @Get('ceiling') @UseGuards(MembershipActiveGuard) ceiling(@CurrentUser() u: any) { return this.svc.ceiling(u.id); }
-  @Post('apply') @UseGuards(MembershipActiveGuard) apply(@CurrentUser() u: any, @Body() dto: ApplyDto) { return this.svc.apply(u.id, dto); }
+  @Get('ceiling')  ceiling(@CurrentUser() u: any) { return this.svc.ceiling(u.id); }
+  @Post('apply')  apply(@CurrentUser() u: any, @Body() dto: ApplyDto) { return this.svc.apply(u.id, dto); }
   @Get() list(@CurrentUser() u: any) { return this.svc.list(u.id); }
   @Post(':id/repay') repay(@CurrentUser() u: any, @Param('id') id: string, @Body() dto: RepayDto) { return this.svc.repay(u.id, id, dto.amountXof); }
   @Post(':id/approve') @Roles(Role.ADMIN) approve(@Param('id') id: string, @CurrentUser() u: any) { return this.svc.approve(id, u.id); }

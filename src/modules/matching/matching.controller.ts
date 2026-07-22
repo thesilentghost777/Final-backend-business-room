@@ -3,14 +3,13 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { MatchingService } from './matching.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { MembershipActiveGuard } from '../../common/guards/membership-active.guard';
 
 class RequestMatchDto {
   @IsString() targetProfileId!: string;
   @IsOptional() @IsString() message?: string;
 }
 
-@ApiTags('matching') @ApiBearerAuth() @UseGuards(MembershipActiveGuard) @Controller('matching')
+@ApiTags('matching') @ApiBearerAuth()  @Controller('matching')
 export class MatchingController {
   constructor(private svc: MatchingService) {}
 

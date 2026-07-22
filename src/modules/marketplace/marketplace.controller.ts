@@ -48,7 +48,6 @@ const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 export class MarketplaceController {
   constructor(private svc: MarketplaceService) {}
 
-  @UseGuards(MembershipActiveGuard)
   @ApiConsumes('multipart/form-data')
   @Post()
   @UseInterceptors(

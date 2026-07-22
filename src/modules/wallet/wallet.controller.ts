@@ -57,19 +57,16 @@ export class WalletController {
   @Post('pay/membership')
   payMembership(@CurrentUser() u: any) { return this.wallet.payMembership(u.id); }
 
-  @UseGuards(MembershipActiveGuard)
   @Post('pay/savings/:id')
   paySavings(@CurrentUser() u: any, @Param('id') id: string, @Body() dto: PaySavingsDto) {
     return this.wallet.paySavingsContribution(u.id, id, dto.amountXof);
   }
 
-  @UseGuards(MembershipActiveGuard)
   @Post('pay/loans/:id/repayment')
   payLoan(@CurrentUser() u: any, @Param('id') id: string, @Body() dto: PayLoanDto) {
     return this.wallet.payLoanRepayment(u.id, id, dto.amountXof);
   }
 
-  @UseGuards(MembershipActiveGuard)
   @Post('pay/share-packs/:packId')
   paySharePack(@CurrentUser() u: any, @Param('packId') packId: string) {
     return this.wallet.paySharePack(u.id, packId);

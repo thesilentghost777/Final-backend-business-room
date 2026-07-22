@@ -2,7 +2,6 @@ import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/c
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SavingsService } from './savings.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { MembershipActiveGuard } from '../../common/guards/membership-active.guard';
 import { IsIn, IsInt, Min } from 'class-validator';
 import { SavingsType } from '@prisma/client';
 

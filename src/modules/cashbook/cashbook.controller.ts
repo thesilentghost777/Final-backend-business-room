@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CashbookService } from './cashbook.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { MembershipActiveGuard } from '../../common/guards/membership-active.guard';
 import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { CashOpType } from '@prisma/client';
 
@@ -16,7 +15,7 @@ class OpDto {
   @IsInt() @Min(1) amountXof!: number;
 }
 
-@ApiTags('cashbook') @ApiBearerAuth() @UseGuards(MembershipActiveGuard) @Controller('cashbook')
+@ApiTags('cashbook') @ApiBearerAuth() @Controller('cashbook')
 export class CashbookController {
   constructor(private svc: CashbookService) {}
   @Post() create(@CurrentUser() u: any, @Body() dto: CreateCashbookDto) { return this.svc.create(u.id, dto.name, dto.openingBalanceXof ?? 0); }

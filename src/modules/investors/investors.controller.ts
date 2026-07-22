@@ -12,7 +12,7 @@ class InvestorDto {
   @IsString() expectations!: string;
 }
 
-@ApiTags('investors') @ApiBearerAuth() @UseGuards(MembershipActiveGuard) @Controller('investors')
+@ApiTags('investors') @ApiBearerAuth()  @Controller('investors')
 export class InvestorsController {
   constructor(private svc: InvestorsService) {}
   @Post() upsert(@CurrentUser() u: any, @Body() dto: InvestorDto) { return this.svc.upsert(u.id, dto); }
