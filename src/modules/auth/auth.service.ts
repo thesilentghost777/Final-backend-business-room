@@ -27,14 +27,11 @@ export class AuthService {
   }
 
   private async resolveReferrer(code?: string) {
-    if (!code) return null;
-    const r = await this.prisma.user.findUnique({ where: { referralCode: code } });
-    if (!r) throw new BadRequestException('Invalid referral code');
-    if (!(await this.prisma.membership.findFirst({ where: { userId: r.id, status: 'ACTIVE' } }))) {
-      throw new BadRequestException('Referrer has not paid membership');
-    }
-    return r;
-  }
+  if (!code) return null;
+  const r = await this.prisma.user.findUnique({ where: { referralCode: code } });
+  if (!r) throw new BadRequestException('Invalid referral code');
+  return r;
+}
 
   async register(dto: RegisterDto & { photoUrl?: string }) {
     if (!dto.email && !dto.phone) throw new BadRequestException('Email or phone required');
